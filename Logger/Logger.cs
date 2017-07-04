@@ -14,23 +14,43 @@ namespace Logger
     {
         private string caminhoDoLog = string.Empty;
 
-        private static string caminhoDoLogStatic = string.Empty;
+        private static string caminhoDoLogEstatico = string.Empty;
 
         private static Dictionary<Guid, string> linhasEscrever = new Dictionary<Guid, string>();
 
         private static bool escrevendoLog = false;
 
+        private bool loggerAtivo = true;
+
         public Logger()
         {
-            if (!Logger.escrevendoLog)
+            if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.Ativo"]))
             {
-                Logger.escrevendoLog = true;
-                CriarArquivoFisicoLog();
-                Logger.LogWriterAsync();
+                loggerAtivo = Convert.ToBoolean(WebConfigurationManager.AppSettings["Logger.Ativo"]);
+            }
+            else
+            {
+                loggerAtivo = false;
+            }
+
+            if (loggerAtivo)
+            {
+                if (!Logger.escrevendoLog)
+                {
+                    Logger.escrevendoLog = true;
+                    CriarArquivoFisicoLog();
+                    Logger.EscreverLogAssincrono();
+                }
+            }
+            else
+            {
+                EventLog eventoLog = new EventLog();
+                eventoLog.Source = "LOGGER - Sistema de Log";
+                eventoLog.WriteEntry("O LOGGER não esta ativido no momento para LOG", EventLogEntryType.Information);
             }
         }
 
-        private static async void LogWriterAsync()
+        private static async void EscreverLogAssincrono()
         {
             var tr = new Task<bool>(() => IniciarEscreverLog());
             tr.Start();
@@ -54,7 +74,7 @@ namespace Logger
                         {
                             try
                             {
-                                File.AppendAllText(caminhoDoLogStatic, item.Value + Environment.NewLine);
+                                File.AppendAllText(caminhoDoLogEstatico, item.Value + Environment.NewLine);
                                 linhasEscrever.Remove(item.Key);
                             }
                             catch (Exception ex)
@@ -109,6 +129,13 @@ namespace Logger
             }
         }
 
+        /// <summary>
+        /// Override com tipo dynamic como segunda atribuição do metodo
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="DadosLog"></param>
+        /// <param name="SegundoDados"></param>
+        /// <returns></returns>
         public bool FazerLog<T>(T DadosLog, dynamic SegundoDados)
         {
             try
@@ -134,6 +161,12 @@ namespace Logger
             }
         }
 
+        /// <summary>
+        /// Chamada de metodo assincrono, que cria uma Task para que seja executada.
+        /// </summary>
+        /// <typeparam name="T"></typeparam>
+        /// <param name="DadosLog"></param>
+        /// <param name="SegundoDados"></param>
         public async void FazerLogAsync<T>(T DadosLog, dynamic SegundoDados)
         {
             var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados));
@@ -215,25 +248,40 @@ namespace Logger
         /// <returns></returns>
         private bool CriarArquivoFisicoLog()
         {
+            string nomeDoAplicativo;
+
             try
             {
-                if (WebConfigurationManager.AppSettings["CaminhoLog"] != null)
+                
+
+                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.NomeDaAplicacao"]))
                 {
-                    string nomeDoArquivo = "Logger_" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Name + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
-                    caminhoDoLog = WebConfigurationManager.AppSettings["CaminhoLog"].ToString() + nomeDoArquivo;
-                    Logger.caminhoDoLogStatic = caminhoDoLog;
+                    nomeDoAplicativo = WebConfigurationManager.AppSettings["Logger.NomeDaAplicacao"].ToString();
                 }
                 else
                 {
-                    string nomeDoArquivo = "Logger_" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Name + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
+                    nomeDoAplicativo = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+                }
+
+
+                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.CaminhoDoLog"]))
+                {
+                    string nomeDoArquivo = "Logger_" + nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
+                    caminhoDoLog = WebConfigurationManager.AppSettings["Logger.CaminhoDoLog"].ToString() + nomeDoArquivo;
+                    Logger.caminhoDoLogEstatico = caminhoDoLog;
+                }
+                else
+                {
+                    string nomeDoArquivo = "Logger_" + nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
                     caminhoDoLog = System.AppDomain.CurrentDomain.BaseDirectory + "Logger\\";
-                    Logger.caminhoDoLogStatic = caminhoDoLog;
+
+                    Logger.caminhoDoLogEstatico = caminhoDoLog;
                     if (!Directory.Exists(caminhoDoLog))
                     {
                         Directory.CreateDirectory(caminhoDoLog);
                     }
                     caminhoDoLog = caminhoDoLog + nomeDoArquivo;
-                    Logger.caminhoDoLogStatic = caminhoDoLog;
+                    Logger.caminhoDoLogEstatico = caminhoDoLog;
                 }
 
                 if (ValidarArquivo(caminhoDoLog))
@@ -273,7 +321,7 @@ namespace Logger
                     //Trocado pelo método de AppendAllText pois se o arquivo não existe ele já tenta criar o mesmo
                     //Isso pode ajudar nos casos da chamada do método acontecer duas vezes seguidas
                     File.AppendAllText(caminhoDoLog, " ");
-                    EfetuarLimpezaSemanal();
+                    EfetuarLimpezaDeArquivos();
                     return true;
                 }
             }
@@ -285,21 +333,45 @@ namespace Logger
                 return false;
             }
         }
-
-        private void EfetuarLimpezaSemanal()
+        /// <summary>
+        /// Método que faz a limpeza dos arquivos de log com mais de uma semana de existencia. 
+        /// </summary>
+        private void EfetuarLimpezaDeArquivos()
         {
             try
             {
                 string caminhoLog = "";
+                int periodoArmazenagem = 0;
+                string nomeDoAplicativo;
 
-                if (WebConfigurationManager.AppSettings["CaminhoLog"] != null)
+                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.PeriodoDeArmazenagem"]))
                 {
-                    string nomeDoArquivo = "Logger_" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Name + "_" + DateTime.Today.AddDays(-7).ToString("dd-MM-yyyy") + ".json";
-                    caminhoLog = WebConfigurationManager.AppSettings["CaminhoLog"].ToString() + nomeDoArquivo;
+                    periodoArmazenagem = Convert.ToInt32(WebConfigurationManager.AppSettings["Logger.PeriodoDeArmazenagem"]);
+                    
                 }
                 else
                 {
-                    string nomeDoArquivo = "Logger_" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Name + "_" + DateTime.Today.AddDays(-7).ToString("dd-MM-yyyy") + ".json";
+                    periodoArmazenagem = 7;
+                }
+
+                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.NomeDaAplicacao"]))
+                {
+                    nomeDoAplicativo = WebConfigurationManager.AppSettings["Logger.NomeDaAplicacao"].ToString();
+                }
+                else
+                {
+                    nomeDoAplicativo = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
+                }
+
+
+                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.CaminhoDoLog"]))
+                {
+                    string nomeDoArquivo = "Logger_" + nomeDoAplicativo + "_" + DateTime.Today.AddDays(-periodoArmazenagem).ToString("dd-MM-yyyy") + ".json";
+                    caminhoLog = WebConfigurationManager.AppSettings["Logger.CaminhoDoLog"].ToString() + nomeDoArquivo;
+                }
+                else
+                {
+                    string nomeDoArquivo = "Logger_" + nomeDoAplicativo + "_" + DateTime.Today.AddDays(-periodoArmazenagem).ToString("dd-MM-yyyy") + ".json";
                     caminhoLog = System.AppDomain.CurrentDomain.BaseDirectory + "Logger\\";
                     caminhoLog = caminhoDoLog + nomeDoArquivo;
                 }
