@@ -51,7 +51,6 @@ namespace Logger
                 logsExclusivos = new List<string>();
             }
 
-
             if (loggerAtivo)
             {
                 if (!Logger.escrevendoLog)
@@ -254,7 +253,6 @@ namespace Logger
             {
                 if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
                 {
-
                     bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
 
                     if (ArquivoCriado)
@@ -304,7 +302,7 @@ namespace Logger
 
                 if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"]))
                 {
-                    string nomeDoArquivo = "Logger_" + tipoDoLog +"_"+ nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
+                    string nomeDoArquivo = "Logger_" + tipoDoLog + "_" + nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
                     caminhoDoLog = WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"].ToString() + nomeDoArquivo;
                     Logger.caminhoDoLogEstatico = caminhoDoLog;
                 }
@@ -359,9 +357,7 @@ namespace Logger
                     //Trocado pelo método de AppendAllText pois se o arquivo não existe ele já tenta criar o mesmo
                     //Isso pode ajudar nos casos da chamada do método acontecer duas vezes seguidas
                     File.AppendAllText(caminhoDoLog, " ");
-                    EfetuarLimpezaDeArquivos(EnumTiposDeLog.TiposDeLog.Informacao);
-                    EfetuarLimpezaDeArquivos(EnumTiposDeLog.TiposDeLog.Alerta);
-                    EfetuarLimpezaDeArquivos(EnumTiposDeLog.TiposDeLog.Erro);
+                    EfetuarLimpezaDeArquivos();                   
                     return true;
                 }
             }
@@ -377,21 +373,25 @@ namespace Logger
         /// <summary>
         /// Método que faz a limpeza dos arquivos de log com mais de uma semana de existencia.
         /// </summary>
-        private void EfetuarLimpezaDeArquivos(EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
+        private void EfetuarLimpezaDeArquivos()
         {
             try
             {
-                string caminhoLog = "";
+                string caminhoLogInterno = "";
                 int periodoArmazenagem = 0;
                 string nomeDoAplicativo;
+                DateTime periodoDeExclusao;
+                long tamanhoLimiteDoArquivo;
 
                 if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.PeriodoDeArmazenagem"]))
                 {
                     periodoArmazenagem = Convert.ToInt32(WebConfigurationManager.AppSettings["Logger.PeriodoDeArmazenagem"]);
+                    periodoDeExclusao = DateTime.Today.AddDays(-periodoArmazenagem);
                 }
                 else
                 {
                     periodoArmazenagem = 7;
+                    periodoDeExclusao = DateTime.Today.AddDays(-periodoArmazenagem);
                 }
 
                 if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.NomeDaAplicacao"]))
@@ -405,17 +405,46 @@ namespace Logger
 
                 if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"]))
                 {
-                    string nomeDoArquivo = "Logger_" + tipoDoLog + "_" + nomeDoAplicativo + "_" + DateTime.Today.AddDays(-periodoArmazenagem).ToString("dd-MM-yyyy") + ".json";
-                    caminhoLog = WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"].ToString() + nomeDoArquivo;
+                    caminhoLogInterno = WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"].ToString();
+                    if (!caminhoLogInterno.EndsWith("\\"))
+                    {
+                        caminhoLogInterno = caminhoLogInterno + "\\";
+                    }
                 }
                 else
                 {
-                    string nomeDoArquivo = "Logger_" + tipoDoLog + "_" + nomeDoAplicativo + "_" + DateTime.Today.AddDays(-periodoArmazenagem).ToString("dd-MM-yyyy") + ".json";
-                    caminhoLog = System.AppDomain.CurrentDomain.BaseDirectory + "Logger\\";
-                    caminhoLog = caminhoDoLog + nomeDoArquivo;
+                    caminhoLogInterno = System.AppDomain.CurrentDomain.BaseDirectory + "Logger\\";
+                    if (!caminhoLogInterno.EndsWith("\\"))
+                    {
+                        caminhoLogInterno = caminhoLogInterno + "\\";
+                    }
                 }
 
-                File.Delete(caminhoLog);
+                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.TamanhoLimiteDoArquivo"]))
+                {
+                    tamanhoLimiteDoArquivo = Convert.ToInt64(WebConfigurationManager.AppSettings["Logger.TamanhoLimiteDoArquivo"]);
+                }
+                else
+                {
+                    tamanhoLimiteDoArquivo = Convert.ToInt64(1073741824);
+                }
+                
+                List<string> ArquivosEncontrados = Directory.GetFiles(caminhoLogInterno, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".json")).ToList();
+
+                for (int i = 0; i < ArquivosEncontrados.Count; i++)
+                {
+                    DateTime dataDeCriacaoDoArquivo = File.GetCreationTime(ArquivosEncontrados[i]);
+                    FileInfo arquivoAtual = new FileInfo(ArquivosEncontrados[i]);
+
+                    if (dataDeCriacaoDoArquivo < periodoDeExclusao)
+                    {
+                        File.Delete(ArquivosEncontrados[i].ToString());
+                    }
+                    else if (arquivoAtual.Length > tamanhoLimiteDoArquivo)
+                    {
+                        File.Delete(ArquivosEncontrados[i].ToString());
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -441,7 +470,6 @@ namespace Logger
                         NullValueHandling = NullValueHandling.Include
                     });
                 Logger.linhasEscrever.Add(Guid.NewGuid(), Dadosjson);
-
             }
             catch (Exception ex)
             {
