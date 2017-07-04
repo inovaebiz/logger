@@ -3,10 +3,10 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Web.Configuration;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using System.Linq;
+using System.Web.Configuration;
 
 namespace Logger
 {
@@ -104,15 +104,15 @@ namespace Logger
         /// <typeparam name="T"></typeparam>
         /// <param name="DadosLog"></param>
         /// <returns></returns>
-        public bool FazerLog<T>(T DadosLog)
+        public bool FazerLog<T>(T DadosLog, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
             try
             {
-                bool ArquivoCriado = CriarArquivoFisicoLog();
+                bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
 
                 if (ArquivoCriado)
                 {
-                    PreencherLog(DadosLog);
+                    PreencherLog(DadosLog, tipoDoLog);
                     return true;
                 }
                 else
@@ -136,15 +136,15 @@ namespace Logger
         /// <param name="DadosLog"></param>
         /// <param name="SegundoDados"></param>
         /// <returns></returns>
-        public bool FazerLog<T>(T DadosLog, dynamic SegundoDados)
+        public bool FazerLog<T>(T DadosLog, dynamic SegundoDados, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
             try
             {
-                bool ArquivoCriado = CriarArquivoFisicoLog();
+                bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
 
                 if (ArquivoCriado)
                 {
-                    PreencherLog(DadosLog, SegundoDados);
+                    PreencherLog(DadosLog, SegundoDados, tipoDoLog);
                     return true;
                 }
                 else
@@ -167,9 +167,9 @@ namespace Logger
         /// <typeparam name="T"></typeparam>
         /// <param name="DadosLog"></param>
         /// <param name="SegundoDados"></param>
-        public async void FazerLogAsync<T>(T DadosLog, dynamic SegundoDados)
+        public async void FazerLogAssincrono<T>(T DadosLog, dynamic SegundoDados, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
-            var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados));
+            var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));
             tr.Start();
             var abc = await tr;
             tr.Dispose();
@@ -215,17 +215,17 @@ namespace Logger
         /// <param name="TituloAcao"></param>
         /// <param name="MensagemAcao"></param>
         /// <returns></returns>
-        public bool FazerLog<T>(T DadosLog, string TituloAcao, string MensagemAcao)
+        public bool FazerLog<T>(T DadosLog, string TituloAcao, string MensagemAcao, EnumTiposDeLog.TiposDeLog tipoDeLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
             try
             {
-                bool ArquivoCriado = CriarArquivoFisicoLog();
+                bool ArquivoCriado = CriarArquivoFisicoLog(tipoDeLog);
 
                 if (ArquivoCriado)
                 {
                     Dictionary<object, object> DicionarioDadosLog = new Dictionary<object, object>();
                     DicionarioDadosLog.Add(TituloAcao, MensagemAcao);
-                    PreencherLog(DadosLog, DicionarioDadosLog);
+                    PreencherLog(DadosLog, DicionarioDadosLog, tipoDeLog);
                     return true;
                 }
                 else
@@ -246,14 +246,12 @@ namespace Logger
         /// Método que faz a criação do arquivo fisico do Log
         /// </summary>
         /// <returns></returns>
-        private bool CriarArquivoFisicoLog()
+        private bool CriarArquivoFisicoLog(EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
             string nomeDoAplicativo;
 
             try
             {
-                
-
                 if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.NomeDaAplicacao"]))
                 {
                     nomeDoAplicativo = WebConfigurationManager.AppSettings["Logger.NomeDaAplicacao"].ToString();
@@ -263,16 +261,15 @@ namespace Logger
                     nomeDoAplicativo = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
                 }
 
-
-                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.CaminhoDoLog"]))
+                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"]))
                 {
-                    string nomeDoArquivo = "Logger_" + nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
-                    caminhoDoLog = WebConfigurationManager.AppSettings["Logger.CaminhoDoLog"].ToString() + nomeDoArquivo;
+                    string nomeDoArquivo = "Logger_" + tipoDoLog +"_"+ nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
+                    caminhoDoLog = WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"].ToString() + nomeDoArquivo;
                     Logger.caminhoDoLogEstatico = caminhoDoLog;
                 }
                 else
                 {
-                    string nomeDoArquivo = "Logger_" + nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
+                    string nomeDoArquivo = "Logger_" + tipoDoLog + "_" + nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
                     caminhoDoLog = System.AppDomain.CurrentDomain.BaseDirectory + "Logger\\";
 
                     Logger.caminhoDoLogEstatico = caminhoDoLog;
@@ -321,7 +318,9 @@ namespace Logger
                     //Trocado pelo método de AppendAllText pois se o arquivo não existe ele já tenta criar o mesmo
                     //Isso pode ajudar nos casos da chamada do método acontecer duas vezes seguidas
                     File.AppendAllText(caminhoDoLog, " ");
-                    EfetuarLimpezaDeArquivos();
+                    EfetuarLimpezaDeArquivos(EnumTiposDeLog.TiposDeLog.Informacao);
+                    EfetuarLimpezaDeArquivos(EnumTiposDeLog.TiposDeLog.Alerta);
+                    EfetuarLimpezaDeArquivos(EnumTiposDeLog.TiposDeLog.Erro);
                     return true;
                 }
             }
@@ -333,10 +332,11 @@ namespace Logger
                 return false;
             }
         }
+
         /// <summary>
-        /// Método que faz a limpeza dos arquivos de log com mais de uma semana de existencia. 
+        /// Método que faz a limpeza dos arquivos de log com mais de uma semana de existencia.
         /// </summary>
-        private void EfetuarLimpezaDeArquivos()
+        private void EfetuarLimpezaDeArquivos(EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
             try
             {
@@ -347,7 +347,6 @@ namespace Logger
                 if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.PeriodoDeArmazenagem"]))
                 {
                     periodoArmazenagem = Convert.ToInt32(WebConfigurationManager.AppSettings["Logger.PeriodoDeArmazenagem"]);
-                    
                 }
                 else
                 {
@@ -363,15 +362,14 @@ namespace Logger
                     nomeDoAplicativo = System.Reflection.Assembly.GetExecutingAssembly().GetName().Name;
                 }
 
-
-                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.CaminhoDoLog"]))
+                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"]))
                 {
-                    string nomeDoArquivo = "Logger_" + nomeDoAplicativo + "_" + DateTime.Today.AddDays(-periodoArmazenagem).ToString("dd-MM-yyyy") + ".json";
-                    caminhoLog = WebConfigurationManager.AppSettings["Logger.CaminhoDoLog"].ToString() + nomeDoArquivo;
+                    string nomeDoArquivo = "Logger_" + tipoDoLog + "_" + nomeDoAplicativo + "_" + DateTime.Today.AddDays(-periodoArmazenagem).ToString("dd-MM-yyyy") + ".json";
+                    caminhoLog = WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"].ToString() + nomeDoArquivo;
                 }
                 else
                 {
-                    string nomeDoArquivo = "Logger_" + nomeDoAplicativo + "_" + DateTime.Today.AddDays(-periodoArmazenagem).ToString("dd-MM-yyyy") + ".json";
+                    string nomeDoArquivo = "Logger_" + tipoDoLog + "_" + nomeDoAplicativo + "_" + DateTime.Today.AddDays(-periodoArmazenagem).ToString("dd-MM-yyyy") + ".json";
                     caminhoLog = System.AppDomain.CurrentDomain.BaseDirectory + "Logger\\";
                     caminhoLog = caminhoDoLog + nomeDoArquivo;
                 }
@@ -391,17 +389,18 @@ namespace Logger
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="DadosParaLog"></param>
-        private void PreencherLog<T>(T DadosParaLog)
+        private void PreencherLog<T>(T DadosParaLog, EnumTiposDeLog.TiposDeLog tipoDeLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
             try
             {
-                string Dadosjson = JsonConvert.SerializeObject(new { InformacoesLog = DadosParaLog, DataDoLog = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") }, Formatting.Indented,
+                string Dadosjson = JsonConvert.SerializeObject(new { InformacoesLog = DadosParaLog, TipoDoLog = tipoDeLog.ToString(), DataDoLog = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") }, Formatting.Indented,
                     new JsonSerializerSettings()
                     {
                         MissingMemberHandling = MissingMemberHandling.Ignore,
                         NullValueHandling = NullValueHandling.Include
                     });
                 Logger.linhasEscrever.Add(Guid.NewGuid(), Dadosjson);
+
             }
             catch (Exception ex)
             {
@@ -417,7 +416,7 @@ namespace Logger
         /// <typeparam name="T"></typeparam>
         /// <param name="dadosLog"></param>
         /// <param name="DicionarioDadosLog"></param>
-        private void PreencherLog<T>(T dadosLog, Dictionary<object, object> DicionarioDadosLog)
+        private void PreencherLog<T>(T dadosLog, Dictionary<object, object> DicionarioDadosLog, EnumTiposDeLog.TiposDeLog tipoDeLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
             try
             {
@@ -443,7 +442,7 @@ namespace Logger
         /// <typeparam name="T"></typeparam>
         /// <param name="dadosLog"></param>
         /// <param name="DicionarioDadosLog"></param>
-        private void PreencherLog<T>(T DadosParaLog, dynamic InformacoesAdicionais)
+        private void PreencherLog<T>(T DadosParaLog, dynamic InformacoesAdicionais, EnumTiposDeLog.TiposDeLog tipoDeLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
             try
             {
