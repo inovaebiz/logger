@@ -22,6 +22,8 @@ namespace Logger
 
         private bool loggerAtivo = true;
 
+        private List<String> logsExclusivos;
+
         public Logger()
         {
             if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.Ativo"]))
@@ -32,6 +34,23 @@ namespace Logger
             {
                 loggerAtivo = false;
             }
+
+            if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.GravarLogExclusivo"]))
+            {
+                logsExclusivos = WebConfigurationManager.AppSettings["Logger.GravarLogExclusivo"].Split(',').ToList();
+                if (logsExclusivos.Count > 0)
+                {
+                    for (int i = 0; i < logsExclusivos.Count; i++)
+                    {
+                        logsExclusivos[i] = logsExclusivos[i].Trim();
+                    }
+                }
+            }
+            else
+            {
+                logsExclusivos = new List<string>();
+            }
+
 
             if (loggerAtivo)
             {
@@ -108,12 +127,19 @@ namespace Logger
         {
             try
             {
-                bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
-
-                if (ArquivoCriado)
+                if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
                 {
-                    PreencherLog(DadosLog, tipoDoLog);
-                    return true;
+                    bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
+
+                    if (ArquivoCriado)
+                    {
+                        PreencherLog(DadosLog, tipoDoLog);
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
                 else
                 {
@@ -140,12 +166,19 @@ namespace Logger
         {
             try
             {
-                bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
-
-                if (ArquivoCriado)
+                if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
                 {
-                    PreencherLog(DadosLog, SegundoDados, tipoDoLog);
-                    return true;
+                    bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
+
+                    if (ArquivoCriado)
+                    {
+                        PreencherLog(DadosLog, SegundoDados, tipoDoLog);
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
                 else
                 {
@@ -215,18 +248,26 @@ namespace Logger
         /// <param name="TituloAcao"></param>
         /// <param name="MensagemAcao"></param>
         /// <returns></returns>
-        public bool FazerLog<T>(T DadosLog, string TituloAcao, string MensagemAcao, EnumTiposDeLog.TiposDeLog tipoDeLog = EnumTiposDeLog.TiposDeLog.Informacao)
+        public bool FazerLog<T>(T DadosLog, string TituloAcao, string MensagemAcao, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
             try
             {
-                bool ArquivoCriado = CriarArquivoFisicoLog(tipoDeLog);
-
-                if (ArquivoCriado)
+                if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
                 {
-                    Dictionary<object, object> DicionarioDadosLog = new Dictionary<object, object>();
-                    DicionarioDadosLog.Add(TituloAcao, MensagemAcao);
-                    PreencherLog(DadosLog, DicionarioDadosLog, tipoDeLog);
-                    return true;
+
+                    bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
+
+                    if (ArquivoCriado)
+                    {
+                        Dictionary<object, object> DicionarioDadosLog = new Dictionary<object, object>();
+                        DicionarioDadosLog.Add(TituloAcao, MensagemAcao);
+                        PreencherLog(DadosLog, DicionarioDadosLog, tipoDoLog);
+                        return true;
+                    }
+                    else
+                    {
+                        return false;
+                    }
                 }
                 else
                 {
