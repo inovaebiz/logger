@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Configuration;
 
@@ -16,9 +15,9 @@ namespace Logger
 
         private static string caminhoDoLogEstatico = string.Empty;
 
-        private static Dictionary<Guid, string> linhasEscrever = new Dictionary<Guid, string>();
+        //private static Dictionary<Guid, string> linhasEscrever = new Dictionary<Guid, string>();
 
-        private static bool escrevendoLog = false;
+        //private static bool escrevendoLog = false;
 
         private bool loggerAtivo = true;
 
@@ -51,16 +50,7 @@ namespace Logger
                 logsExclusivos = new List<string>();
             }
 
-            if (loggerAtivo)
-            {
-                if (!Logger.escrevendoLog)
-                {
-                    Logger.escrevendoLog = true;
-                    CriarArquivoFisicoLog();
-                    Logger.EscreverLogAssincrono();
-                }
-            }
-            else
+            if (!loggerAtivo)
             {
                 EventLog eventoLog = new EventLog();
                 eventoLog.Source = "LOGGER - Sistema de Log";
@@ -68,52 +58,35 @@ namespace Logger
             }
         }
 
-        private static async void EscreverLogAssincrono()
-        {
-            var tr = new Task<bool>(() => IniciarEscreverLog());
-            tr.Start();
-            var abc = await tr;
-            tr.Dispose();
-        }
+        //private static void EscreverLog()
+        //{
+        //    var tr = new Task<bool>(() => IniciarEscreverLog());
+        //    tr.Start();
 
-        private static bool IniciarEscreverLog()
+        //}
+
+        private static bool IniciarEscreverLog(Dictionary<Guid, string> dadosLog)
         {
             try
             {
-                for (long i = 0; i < Int64.MaxValue; i++)
+                
+                var informacoesLog = dadosLog.ToList();
+
+                for (int i = 0; i < informacoesLog.Count; i++)
                 {
-                    Thread.Sleep(5000);
-
-                    if (linhasEscrever.Count > 0)
-                    {
-                        var linhasAtual = linhasEscrever.Take(1000).ToList();
-
-                        foreach (var item in linhasAtual)
-                        {
-                            try
-                            {
-                                File.AppendAllText(caminhoDoLogEstatico, item.Value + Environment.NewLine);
-                                linhasEscrever.Remove(item.Key);
-                            }
-                            catch (Exception ex)
-                            {
-                                EventLog eventoLog = new EventLog();
-                                eventoLog.Source = "LOGGER - Sistema de Log";
-                                eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
-                            }
-                        }
-                    }
+                    File.AppendAllText(caminhoDoLogEstatico, informacoesLog[i].Value + Environment.NewLine);
                 }
+                
+                //linhasEscrever.Remove(item.Key);
             }
             catch (Exception ex)
             {
-                escrevendoLog = false;
                 EventLog eventoLog = new EventLog();
                 eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("O método IniciarEscreverLog() falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
-                return true;
+                eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
             }
-            return false;
+
+            return true;
         }
 
         /// <summary>
@@ -126,14 +99,23 @@ namespace Logger
         {
             try
             {
-                if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
+                if (loggerAtivo)
                 {
-                    bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
 
-                    if (ArquivoCriado)
+
+                    if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
                     {
-                        PreencherLog(DadosLog, tipoDoLog);
-                        return true;
+                        bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
+
+                        if (ArquivoCriado)
+                        {
+                            PreencherLog(DadosLog, tipoDoLog);
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
                     }
                     else
                     {
@@ -165,14 +147,21 @@ namespace Logger
         {
             try
             {
-                if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
+                if (loggerAtivo)
                 {
-                    bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
-
-                    if (ArquivoCriado)
+                    if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
                     {
-                        PreencherLog(DadosLog, SegundoDados, tipoDoLog);
-                        return true;
+                        bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
+
+                        if (ArquivoCriado)
+                        {
+                            PreencherLog(DadosLog, SegundoDados, tipoDoLog);
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
                     }
                     else
                     {
@@ -199,13 +188,11 @@ namespace Logger
         /// <typeparam name="T"></typeparam>
         /// <param name="DadosLog"></param>
         /// <param name="SegundoDados"></param>
-        public async void FazerLogAssincrono<T>(T DadosLog, dynamic SegundoDados, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
-        {
-            var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));
-            tr.Start();
-            var abc = await tr;
-            tr.Dispose();
-        }
+        //public  void FazerLogAssincrono<T>(T DadosLog, dynamic SegundoDados, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
+        //{
+        //    var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));
+        //    tr.Start();
+        //}
 
         ///// <summary>
         ///// Override quando tiver itens a mais do que o carrinho a ser colocado no log
@@ -251,26 +238,30 @@ namespace Logger
         {
             try
             {
-                if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
+                if (loggerAtivo)
                 {
-                    bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
-
-                    if (ArquivoCriado)
+                    if (logsExclusivos.Exists(x => x == tipoDoLog.ToString()) || logsExclusivos.Count == 0)
                     {
-                        Dictionary<object, object> DicionarioDadosLog = new Dictionary<object, object>();
-                        DicionarioDadosLog.Add(TituloAcao, MensagemAcao);
-                        PreencherLog(DadosLog, DicionarioDadosLog, tipoDoLog);
-                        return true;
+                        bool ArquivoCriado = CriarArquivoFisicoLog(tipoDoLog);
+
+                        if (ArquivoCriado)
+                        {
+                            Dictionary<object, object> DicionarioDadosLog = new Dictionary<object, object>();
+                            DicionarioDadosLog.Add(TituloAcao, MensagemAcao);
+                            PreencherLog(DadosLog, DicionarioDadosLog, tipoDoLog);
+                            return true;
+                        }
+                        else
+                        {
+                            return false;
+                        }
                     }
                     else
                     {
                         return false;
                     }
                 }
-                else
-                {
-                    return false;
-                }
+                return false;   
             }
             catch (Exception ex)
             {
@@ -357,7 +348,7 @@ namespace Logger
                     //Trocado pelo método de AppendAllText pois se o arquivo não existe ele já tenta criar o mesmo
                     //Isso pode ajudar nos casos da chamada do método acontecer duas vezes seguidas
                     File.AppendAllText(caminhoDoLog, " ");
-                    EfetuarLimpezaDeArquivos();                   
+                    EfetuarLimpezaDeArquivos();
                     return true;
                 }
             }
@@ -428,7 +419,7 @@ namespace Logger
                 {
                     tamanhoLimiteDoArquivo = Convert.ToInt64(1073741824);
                 }
-                
+
                 List<string> ArquivosEncontrados = Directory.GetFiles(caminhoLogInterno, "*.*", SearchOption.AllDirectories).Where(s => s.EndsWith(".json")).ToList();
 
                 for (int i = 0; i < ArquivosEncontrados.Count; i++)
@@ -461,6 +452,7 @@ namespace Logger
         /// <param name="DadosParaLog"></param>
         private void PreencherLog<T>(T DadosParaLog, EnumTiposDeLog.TiposDeLog tipoDeLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
+            Dictionary<Guid, string> dadosParaEscreverLog = new Dictionary<Guid, string>();
             try
             {
                 string Dadosjson = JsonConvert.SerializeObject(new { InformacoesLog = DadosParaLog, TipoDoLog = tipoDeLog.ToString(), DataDoLog = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") }, Formatting.Indented,
@@ -469,7 +461,9 @@ namespace Logger
                         MissingMemberHandling = MissingMemberHandling.Ignore,
                         NullValueHandling = NullValueHandling.Include
                     });
-                Logger.linhasEscrever.Add(Guid.NewGuid(), Dadosjson);
+                dadosParaEscreverLog.Add(Guid.NewGuid(), Dadosjson);
+                Task tr = new Task<bool>(() => IniciarEscreverLog(dadosParaEscreverLog));
+                tr.Start();
             }
             catch (Exception ex)
             {
@@ -487,6 +481,7 @@ namespace Logger
         /// <param name="DicionarioDadosLog"></param>
         private void PreencherLog<T>(T dadosLog, Dictionary<object, object> DicionarioDadosLog, EnumTiposDeLog.TiposDeLog tipoDeLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
+            Dictionary<Guid, string> dadosParaEscreverLog = new Dictionary<Guid, string>();
             try
             {
                 string Dadosjson = JsonConvert.SerializeObject(new { InformacoesPrincipaisLog = dadosLog, InformacoesAdicionais = DicionarioDadosLog, DataDoLog = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") }, Formatting.Indented,
@@ -495,7 +490,9 @@ namespace Logger
                         MissingMemberHandling = MissingMemberHandling.Ignore,
                         NullValueHandling = NullValueHandling.Include
                     });
-                Logger.linhasEscrever.Add(Guid.NewGuid(), Dadosjson);
+                dadosParaEscreverLog.Add(Guid.NewGuid(), Dadosjson);
+                Task tr = new Task<bool>(() => IniciarEscreverLog(dadosParaEscreverLog));
+                tr.Start();
             }
             catch (Exception ex)
             {
@@ -513,6 +510,7 @@ namespace Logger
         /// <param name="DicionarioDadosLog"></param>
         private void PreencherLog<T>(T DadosParaLog, dynamic InformacoesAdicionais, EnumTiposDeLog.TiposDeLog tipoDeLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
+            Dictionary<Guid, string> dadosParaEscreverLog = new Dictionary<Guid, string>();
             try
             {
                 string Dadosjson = JsonConvert.SerializeObject(new { InformacoesLog = DadosParaLog, InformacoesAdicionais, DataDoLog = DateTime.Now.ToString("dd/MM/yyyy HH:mm:ss") }, Formatting.Indented,
@@ -522,7 +520,9 @@ namespace Logger
                         NullValueHandling = NullValueHandling.Ignore,
                         DefaultValueHandling = DefaultValueHandling.Ignore
                     });
-                Logger.linhasEscrever.Add(Guid.NewGuid(), Dadosjson);
+                dadosParaEscreverLog.Add(Guid.NewGuid(), Dadosjson);
+                Task tr = new Task<bool>(() => IniciarEscreverLog(dadosParaEscreverLog));
+                tr.Start();
             }
             catch (Exception ex)
             {

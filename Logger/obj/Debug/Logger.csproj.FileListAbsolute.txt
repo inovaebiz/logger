@@ -39,4 +39,3 @@ C:\Projetos\Logger\Logger\bin\Debug\Newtonsoft.Json.xml
 C:\Projetos\Logger\Logger\bin\Debug\System.IO.xml
 C:\Projetos\Logger\Logger\bin\Debug\System.Runtime.xml
 C:\Projetos\Logger\Logger\bin\Debug\System.Threading.Tasks.xml
-C:\Projetos\Logger\Logger\obj\Debug\Logger.csprojResolveAssemblyReference.cache
