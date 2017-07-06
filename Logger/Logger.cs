@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Web.Configuration;
 
@@ -15,9 +16,11 @@ namespace Logger
 
         private static string caminhoDoLogEstatico = string.Empty;
 
-        //private static Dictionary<Guid, string> linhasEscrever = new Dictionary<Guid, string>();
+        private static Dictionary<Guid, string> linhasEscreverAlerta = new Dictionary<Guid, string>();
+        private static Dictionary<Guid, string> linhasEscreverErro = new Dictionary<Guid, string>();
+        private static Dictionary<Guid, string> linhasEscreverInformacao = new Dictionary<Guid, string>();
 
-        //private static bool escrevendoLog = false;
+        private static bool escrevendoLog = false;
 
         private bool loggerAtivo = true;
 
@@ -56,6 +59,17 @@ namespace Logger
                 eventoLog.Source = "LOGGER - Sistema de Log";
                 eventoLog.WriteEntry("O LOGGER não esta ativido no momento para LOG", EventLogEntryType.Information);
             }
+            else
+            {
+                if (!Logger.escrevendoLog)
+                {
+                    Logger.escrevendoLog = true;
+                    CriarArquivoFisicoLog();
+                    CriarArquivoFisicoLog(EnumTiposDeLog.TiposDeLog.Alerta);
+                    CriarArquivoFisicoLog(EnumTiposDeLog.TiposDeLog.Erro);
+                    Logger.LogWriterAsync();
+                }
+            }
         }
 
         //private static void EscreverLog()
@@ -65,29 +79,119 @@ namespace Logger
 
         //}
 
-        private static bool IniciarEscreverLog(Dictionary<Guid, string> dadosLog)
+        //private static bool IniciarEscreverLog(Dictionary<Guid, string> dadosLog)
+        //{
+        //    try
+        //    {
+
+        //        var informacoesLog = dadosLog.ToList();
+
+        //        for (int i = 0; i < informacoesLog.Count; i++)
+        //        {
+        //            File.AppendAllText(caminhoDoLogEstatico, informacoesLog[i].Value + Environment.NewLine);
+        //        }
+
+        //        //linhasEscrever.Remove(item.Key);
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        EventLog eventoLog = new EventLog();
+        //        eventoLog.Source = "LOGGER - Sistema de Log";
+        //        eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+        //    }
+
+        //    return true;
+        //}
+
+        private static void LogWriterAsync()
+        {
+            var tr = new Task<bool>(() => IniciarEscreverLog());
+            tr.Start();           
+           
+        }
+
+
+        private static bool IniciarEscreverLog()
         {
             try
             {
-                
-                var informacoesLog = dadosLog.ToList();
-
-                for (int i = 0; i < informacoesLog.Count; i++)
+                for (long i = 0; i < Int64.MaxValue; i++)
                 {
-                    File.AppendAllText(caminhoDoLogEstatico, informacoesLog[i].Value + Environment.NewLine);
+                    Thread.Sleep(5000);
+
+                    if (linhasEscreverInformacao.Count > 0)
+                    {
+                        var linhasAtual = linhasEscreverInformacao.Take(1000).ToList();
+
+                        foreach (var item in linhasAtual)
+                        {
+                            try
+                            {
+                                File.AppendAllText(caminhoDoLogEstatico, item.Value + Environment.NewLine);
+                                linhasEscreverInformacao.Remove(item.Key);
+                            }
+                            catch (Exception ex)
+                            {
+                                EventLog eventoLog = new EventLog();
+                                eventoLog.Source = "LOGGER - Sistema de Log";
+                                eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                            }
+                        }
+                    }
+
+                    if (linhasEscreverErro.Count > 0)
+                    {
+                        var linhasAtual = linhasEscreverErro.Take(1000).ToList();
+
+                        foreach (var item in linhasAtual)
+                        {
+                            try
+                            {
+                                File.AppendAllText(caminhoDoLogEstatico, item.Value + Environment.NewLine);
+                                linhasEscreverErro.Remove(item.Key);
+                            }
+                            catch (Exception ex)
+                            {
+                                EventLog eventoLog = new EventLog();
+                                eventoLog.Source = "LOGGER - Sistema de Log";
+                                eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                            }
+                        }
+                    }
+
+
+                    if (linhasEscreverAlerta.Count > 0)
+                    {
+                        var linhasAtual = linhasEscreverAlerta.Take(1000).ToList();
+
+                        foreach (var item in linhasAtual)
+                        {
+                            try
+                            {
+                                File.AppendAllText(caminhoDoLogEstatico, item.Value + Environment.NewLine);
+                                linhasEscreverAlerta.Remove(item.Key);
+                            }
+                            catch (Exception ex)
+                            {
+                                EventLog eventoLog = new EventLog();
+                                eventoLog.Source = "LOGGER - Sistema de Log";
+                                eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                            }
+                        }
+                    }
                 }
-                
-                //linhasEscrever.Remove(item.Key);
             }
             catch (Exception ex)
             {
+                escrevendoLog = false;
                 EventLog eventoLog = new EventLog();
                 eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                eventoLog.WriteEntry("O método IniciarEscreverLog() falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                return true;
             }
-
-            return true;
+            return false;
         }
+
 
         /// <summary>
         /// Método de chamada para que se inicie o processo de log
@@ -188,11 +292,11 @@ namespace Logger
         /// <typeparam name="T"></typeparam>
         /// <param name="DadosLog"></param>
         /// <param name="SegundoDados"></param>
-        //public  void FazerLogAssincrono<T>(T DadosLog, dynamic SegundoDados, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
-        //{
-        //    var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));
-        //    tr.Start();
-        //}
+        public void FazerLogAsync<T>(T DadosLog, dynamic SegundoDados, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
+        {
+            var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));
+            tr.Start();
+        }
 
         ///// <summary>
         ///// Override quando tiver itens a mais do que o carrinho a ser colocado no log
@@ -461,9 +565,19 @@ namespace Logger
                         MissingMemberHandling = MissingMemberHandling.Ignore,
                         NullValueHandling = NullValueHandling.Include
                     });
-                dadosParaEscreverLog.Add(Guid.NewGuid(), Dadosjson);
-                Task tr = new Task<bool>(() => IniciarEscreverLog(dadosParaEscreverLog));
-                tr.Start();
+
+                if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Informacao)
+                {
+                    Logger.linhasEscreverInformacao.Add(Guid.NewGuid(), Dadosjson);
+                }
+                else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Erro)
+                {
+                    Logger.linhasEscreverErro.Add(Guid.NewGuid(), Dadosjson);
+                }
+                else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Alerta)
+                {
+                    Logger.linhasEscreverAlerta.Add(Guid.NewGuid(), Dadosjson);
+                }
             }
             catch (Exception ex)
             {
@@ -490,9 +604,20 @@ namespace Logger
                         MissingMemberHandling = MissingMemberHandling.Ignore,
                         NullValueHandling = NullValueHandling.Include
                     });
-                dadosParaEscreverLog.Add(Guid.NewGuid(), Dadosjson);
-                Task tr = new Task<bool>(() => IniciarEscreverLog(dadosParaEscreverLog));
-                tr.Start();
+
+                if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Informacao)
+                {
+                    Logger.linhasEscreverInformacao.Add(Guid.NewGuid(), Dadosjson);
+                }
+                else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Erro)
+                {
+                    Logger.linhasEscreverErro.Add(Guid.NewGuid(), Dadosjson);
+                }
+                else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Alerta)
+                {
+                    Logger.linhasEscreverAlerta.Add(Guid.NewGuid(), Dadosjson);
+                }
+                
             }
             catch (Exception ex)
             {
@@ -520,9 +645,19 @@ namespace Logger
                         NullValueHandling = NullValueHandling.Ignore,
                         DefaultValueHandling = DefaultValueHandling.Ignore
                     });
-                dadosParaEscreverLog.Add(Guid.NewGuid(), Dadosjson);
-                Task tr = new Task<bool>(() => IniciarEscreverLog(dadosParaEscreverLog));
-                tr.Start();
+
+                if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Informacao)
+                {
+                    Logger.linhasEscreverInformacao.Add(Guid.NewGuid(), Dadosjson);
+                }
+                else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Erro)
+                {
+                    Logger.linhasEscreverErro.Add(Guid.NewGuid(), Dadosjson);
+                }
+                else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Alerta)
+                {
+                    Logger.linhasEscreverAlerta.Add(Guid.NewGuid(), Dadosjson);
+                }
             }
             catch (Exception ex)
             {
