@@ -1,5 +1,6 @@
 ﻿using Newtonsoft.Json;
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -19,9 +20,9 @@ namespace Logger
         private static string caminhoDoLogEstaticoErro = string.Empty;
 
 
-        private static Dictionary<Guid, string> linhasEscreverAlerta = new Dictionary<Guid, string>();
-        private static Dictionary<Guid, string> linhasEscreverErro = new Dictionary<Guid, string>();
-        private static Dictionary<Guid, string> linhasEscreverInformacao = new Dictionary<Guid, string>();
+        private static ConcurrentDictionary<Guid, string> linhasEscreverAlerta = new ConcurrentDictionary<Guid, string>();
+        private static ConcurrentDictionary<Guid, string> linhasEscreverErro = new ConcurrentDictionary<Guid, string>();
+        private static ConcurrentDictionary<Guid, string> linhasEscreverInformacao = new ConcurrentDictionary<Guid, string>();
 
         private static bool escrevendoLog = false;
 
@@ -126,6 +127,8 @@ namespace Logger
 
                     if (linhasEscreverInformacao.Count > 0)
                     {
+                        string linharemovida = string.Empty;
+
                         var linhasAtual = linhasEscreverInformacao.Take(1000).ToList();
 
                         foreach (var item in linhasAtual)
@@ -133,7 +136,7 @@ namespace Logger
                             try
                             {
                                 File.AppendAllText(caminhoDoLogEstatico, item.Value + Environment.NewLine);
-                                linhasEscreverInformacao.Remove(item.Key);
+                                linhasEscreverInformacao.TryRemove(item.Key,out linharemovida);
                             }
                             catch (Exception ex)
                             {
@@ -146,6 +149,8 @@ namespace Logger
 
                     if (linhasEscreverErro.Count > 0)
                     {
+                        string linharemovida = string.Empty;
+
                         var linhasAtual = linhasEscreverErro.Take(1000).ToList();
 
                         foreach (var item in linhasAtual)
@@ -153,7 +158,7 @@ namespace Logger
                             try
                             {
                                 File.AppendAllText(caminhoDoLogEstaticoErro, item.Value + Environment.NewLine);
-                                linhasEscreverErro.Remove(item.Key);
+                                linhasEscreverInformacao.TryRemove(item.Key, out linharemovida);
                             }
                             catch (Exception ex)
                             {
@@ -167,6 +172,8 @@ namespace Logger
 
                     if (linhasEscreverAlerta.Count > 0)
                     {
+                        string linharemovida = string.Empty;
+
                         var linhasAtual = linhasEscreverAlerta.Take(1000).ToList();
 
                         foreach (var item in linhasAtual)
@@ -174,7 +181,7 @@ namespace Logger
                             try
                             {
                                 File.AppendAllText(caminhoDoLogEstaticoAlerta, item.Value + Environment.NewLine);
-                                linhasEscreverAlerta.Remove(item.Key);
+                                linhasEscreverInformacao.TryRemove(item.Key, out linharemovida);
                             }
                             catch (Exception ex)
                             {
@@ -597,15 +604,15 @@ namespace Logger
 
                 if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Informacao)
                 {
-                    Logger.linhasEscreverInformacao.Add(Guid.NewGuid(), Dadosjson);
+                    Logger.linhasEscreverInformacao.TryAdd(Guid.NewGuid(), Dadosjson);
                 }
                 else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Erro)
                 {
-                    Logger.linhasEscreverErro.Add(Guid.NewGuid(), Dadosjson);
+                    Logger.linhasEscreverErro.TryAdd(Guid.NewGuid(), Dadosjson);
                 }
                 else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Alerta)
                 {
-                    Logger.linhasEscreverAlerta.Add(Guid.NewGuid(), Dadosjson);
+                    Logger.linhasEscreverAlerta.TryAdd(Guid.NewGuid(), Dadosjson);
                 }
             }
             catch (Exception ex)
@@ -636,15 +643,15 @@ namespace Logger
 
                 if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Informacao)
                 {
-                    Logger.linhasEscreverInformacao.Add(Guid.NewGuid(), Dadosjson);
+                    Logger.linhasEscreverInformacao.TryAdd(Guid.NewGuid(), Dadosjson);
                 }
                 else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Erro)
                 {
-                    Logger.linhasEscreverErro.Add(Guid.NewGuid(), Dadosjson);
+                    Logger.linhasEscreverErro.TryAdd(Guid.NewGuid(), Dadosjson);
                 }
                 else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Alerta)
                 {
-                    Logger.linhasEscreverAlerta.Add(Guid.NewGuid(), Dadosjson);
+                    Logger.linhasEscreverAlerta.TryAdd(Guid.NewGuid(), Dadosjson);
                 }
                 
             }
@@ -677,15 +684,15 @@ namespace Logger
 
                 if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Informacao)
                 {
-                    Logger.linhasEscreverInformacao.Add(Guid.NewGuid(), Dadosjson);
+                    Logger.linhasEscreverInformacao.TryAdd(Guid.NewGuid(), Dadosjson);
                 }
                 else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Erro)
                 {
-                    Logger.linhasEscreverErro.Add(Guid.NewGuid(), Dadosjson);
+                    Logger.linhasEscreverErro.TryAdd(Guid.NewGuid(), Dadosjson);
                 }
                 else if (tipoDeLog == EnumTiposDeLog.TiposDeLog.Alerta)
                 {
-                    Logger.linhasEscreverAlerta.Add(Guid.NewGuid(), Dadosjson);
+                    Logger.linhasEscreverAlerta.TryAdd(Guid.NewGuid(), Dadosjson);
                 }
             }
             catch (Exception ex)
