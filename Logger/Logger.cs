@@ -15,6 +15,9 @@ namespace Logger
         private string caminhoDoLog = string.Empty;
 
         private static string caminhoDoLogEstatico = string.Empty;
+        private static string caminhoDoLogEstaticoAlerta = string.Empty;
+        private static string caminhoDoLogEstaticoErro = string.Empty;
+
 
         private static Dictionary<Guid, string> linhasEscreverAlerta = new Dictionary<Guid, string>();
         private static Dictionary<Guid, string> linhasEscreverErro = new Dictionary<Guid, string>();
@@ -105,7 +108,9 @@ namespace Logger
 
         private static void LogWriterAsync()
         {
-            var tr = new Task<bool>(() => IniciarEscreverLog());
+            //var tr = new Task<bool>(() => IniciarEscreverLog());
+            var tr = new Thread(() => IniciarEscreverLog());
+            tr.IsBackground = true;
             tr.Start();           
            
         }
@@ -115,7 +120,7 @@ namespace Logger
         {
             try
             {
-                for (long i = 0; i < Int64.MaxValue; i++)
+                for (long i = 0; i <= Int64.MaxValue; i++)
                 {
                     Thread.Sleep(5000);
 
@@ -147,7 +152,7 @@ namespace Logger
                         {
                             try
                             {
-                                File.AppendAllText(caminhoDoLogEstatico, item.Value + Environment.NewLine);
+                                File.AppendAllText(caminhoDoLogEstaticoErro, item.Value + Environment.NewLine);
                                 linhasEscreverErro.Remove(item.Key);
                             }
                             catch (Exception ex)
@@ -168,7 +173,7 @@ namespace Logger
                         {
                             try
                             {
-                                File.AppendAllText(caminhoDoLogEstatico, item.Value + Environment.NewLine);
+                                File.AppendAllText(caminhoDoLogEstaticoAlerta, item.Value + Environment.NewLine);
                                 linhasEscreverAlerta.Remove(item.Key);
                             }
                             catch (Exception ex)
@@ -294,7 +299,7 @@ namespace Logger
         /// <param name="SegundoDados"></param>
         public void FazerLogAsync<T>(T DadosLog, dynamic SegundoDados, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
-            var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));
+            var tr = new Thread(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));           
             tr.Start();
         }
 
@@ -399,14 +404,38 @@ namespace Logger
                 {
                     string nomeDoArquivo = "Logger_" + tipoDoLog + "_" + nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
                     caminhoDoLog = WebConfigurationManager.AppSettings["Logger.DiretorioDeGravacao"].ToString() + nomeDoArquivo;
-                    Logger.caminhoDoLogEstatico = caminhoDoLog;
+
+                    if (tipoDoLog == EnumTiposDeLog.TiposDeLog.Informacao)
+                    {
+                        Logger.caminhoDoLogEstatico = caminhoDoLog;
+                    }
+                    else if (tipoDoLog == EnumTiposDeLog.TiposDeLog.Erro)
+                    {
+                        Logger.caminhoDoLogEstaticoErro = caminhoDoLog;
+                    }
+                    else if (tipoDoLog == EnumTiposDeLog.TiposDeLog.Alerta)
+                    {
+                        Logger.caminhoDoLogEstaticoAlerta = caminhoDoLog;
+                    }
                 }
                 else
                 {
                     string nomeDoArquivo = "Logger_" + tipoDoLog + "_" + nomeDoAplicativo + "_" + DateTime.Today.ToString("dd-MM-yyyy") + ".json";
                     caminhoDoLog = System.AppDomain.CurrentDomain.BaseDirectory + "Logger\\";
 
-                    Logger.caminhoDoLogEstatico = caminhoDoLog;
+                    if (tipoDoLog == EnumTiposDeLog.TiposDeLog.Informacao)
+                    {
+                        Logger.caminhoDoLogEstatico = caminhoDoLog;
+                    }
+                    else if (tipoDoLog == EnumTiposDeLog.TiposDeLog.Erro)
+                    {
+                        Logger.caminhoDoLogEstaticoErro = caminhoDoLog;
+                    }
+                    else if (tipoDoLog == EnumTiposDeLog.TiposDeLog.Alerta)
+                    {
+                        Logger.caminhoDoLogEstaticoAlerta = caminhoDoLog;
+                    }
+
                     if (!Directory.Exists(caminhoDoLog))
                     {
                         Directory.CreateDirectory(caminhoDoLog);
