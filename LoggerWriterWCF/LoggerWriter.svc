@@ -1,0 +1,1 @@
+﻿<%@ ServiceHost Language="C#" Debug="true" Service="LoggerWriterWCF.Service1" CodeBehind="LoggerWriter.svc.cs" %>
