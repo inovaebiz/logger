@@ -310,6 +310,11 @@ namespace Logger
             tr.Start();
         }
 
+        public void FazerLogAsync<T>(string DadosLog, string SegundoDados, bool serializar, EnumTiposDeLog.TiposDeLog tipoDoLog)
+        {
+            FazerLogAsync(JsonConvert.DeserializeObject(DadosLog), JsonConvert.DeserializeObject(SegundoDados), tipoDoLog);
+        }
+
         ///// <summary>
         ///// Override quando tiver itens a mais do que o carrinho a ser colocado no log
         ///// </summary>

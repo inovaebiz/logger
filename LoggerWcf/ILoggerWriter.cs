@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
 using System.ServiceModel;
@@ -12,13 +13,34 @@ namespace LoggerWcf
     [ServiceContract]
     public interface ILoggerWriter
     {
+        /*[OperationContract]
+        [WebInvoke(Method = "POST", UriTemplate = "/Escrever", BodyStyle = WebMessageBodyStyle.Wrapped)]
+        bool FazerLog<T>(T DadosLog, dynamic SegundoDados, int EnumTipoLog);*/
+
+        /*[OperationContract]
+        [WebInvoke(Method = "POST", 
+                   UriTemplate = "/Escrever", 
+                   BodyStyle = WebMessageBodyStyle.Wrapped,
+                   RequestFormat = WebMessageFormat.Json,
+                   ResponseFormat = WebMessageFormat.Json)]
+        bool FazerLog(dynamic DadosLog, dynamic SegundoDados, int EnumTipoLog);*/
+
         [OperationContract]
-        [WebInvoke(Method = "POST", UriTemplate = "/Escrever")]
-        bool FazerLog<T>(T DadosLog, dynamic SegundoDados, int EnumTipoLog);
+        [WebGet(UriTemplate = "/Escrever?log={DadosLog}&second={SegundoDados}&TipoLog={EnumTipoLog}",
+           BodyStyle = WebMessageBodyStyle.Bare,
+           RequestFormat = WebMessageFormat.Json)]
+        bool FazerLog(dynamic DadosLog, dynamic SegundoDados, int EnumTipoLog);
 
         // TODO: Adicione suas operações de serviço aqui
     }
 
+    [DataContract]
+    public class DynamicEntry
+    {
+
+        [DataMember]
+        public object DadosLog;
+    }
 
     // Use um contrato de dados como ilustrado no exemplo abaixo para adicionar tipos compostos a operações de serviço.
     [DataContract]
