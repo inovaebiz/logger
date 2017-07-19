@@ -29,7 +29,7 @@ namespace LoggerWcf
         [WebGet(UriTemplate = "/Escrever?log={DadosLog}&second={SegundoDados}&TipoLog={EnumTipoLog}",
            BodyStyle = WebMessageBodyStyle.Bare,
            RequestFormat = WebMessageFormat.Json)]
-        bool FazerLog(dynamic DadosLog, dynamic SegundoDados, int EnumTipoLog);
+        bool FazerLog(string DadosLog, string SegundoDados, int EnumTipoLog);
 
         // TODO: Adicione suas operações de serviço aqui
     }
