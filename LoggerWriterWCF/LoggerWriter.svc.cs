@@ -16,12 +16,6 @@ namespace LoggerWriterWCF
     // OBSERVAÇÃO: Para iniciar o cliente de teste do WCF para testar esse serviço, selecione Service1.svc ou Service1.svc.cs no Gerenciador de Soluções e inicie a depuração.
     public class LoggerWriter : ILoggerWriter
     {
-        private string caminhoDoLog = string.Empty;
-
-        private static string caminhoDoLogEstatico = string.Empty;
-        private static string caminhoDoLogEstaticoAlerta = string.Empty;
-        private static string caminhoDoLogEstaticoErro = string.Empty;
-
         //GUID, (log,caminho)
         private static Dictionary<Guid, Tuple<string, string>> dictLogs = new Dictionary<Guid, Tuple<string, string>>();
 
@@ -32,12 +26,14 @@ namespace LoggerWriterWCF
         {
             try
             {
+                Thread.Sleep(new Random().Next(1200, 4000));
+
                 if (!escrevendoLog)
                 {
                     escrevendoLog = true;
-                    Thread.Sleep(new Random().Next(1200, 4000));
                     WriteAsync();
                 }
+
                 dictLogs.Add(Guid.NewGuid(), new Tuple<string, string>(log, caminho));
 
             }
@@ -100,7 +96,7 @@ namespace LoggerWriterWCF
 
             return true;
         }
-    }
 
+    }
 
 }

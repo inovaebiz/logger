@@ -40,3 +40,11 @@ C:\Projetos\Logger\Logger\bin\Debug\System.IO.xml
 C:\Projetos\Logger\Logger\bin\Debug\System.Runtime.xml
 C:\Projetos\Logger\Logger\bin\Debug\System.Threading.Tasks.xml
 C:\Projetos\Logger\Logger\obj\Debug\Logger.csprojResolveAssemblyReference.cache
+C:\projetos\logger-github\Logger\obj\Debug\Logger.csprojResolveAssemblyReference.cache
+C:\projetos\logger-github\Logger\obj\Debug\Logger.dll
+C:\projetos\logger-github\Logger\obj\Debug\Logger.pdb
+C:\projetos\logger-github\Logger\bin\Debug\Logger.dll.config
+C:\projetos\logger-github\Logger\bin\Debug\Logger.dll
+C:\projetos\logger-github\Logger\bin\Debug\Logger.pdb
+C:\projetos\logger-github\Logger\bin\Debug\Newtonsoft.Json.dll
+C:\projetos\logger-github\Logger\bin\Debug\Newtonsoft.Json.xml
