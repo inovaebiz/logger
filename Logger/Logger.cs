@@ -41,29 +41,26 @@ namespace Logger
                 loggerAtivo = false;
             }
 
-            if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.GravarLogExclusivo"]))
+            if (logsExclusivos == null || logsExclusivos.Count == 0)
             {
-                logsExclusivos = WebConfigurationManager.AppSettings["Logger.GravarLogExclusivo"].Split(',').ToList();
-                if (logsExclusivos.Count > 0)
+                if (!string.IsNullOrEmpty(WebConfigurationManager.AppSettings["Logger.GravarLogExclusivo"]))
                 {
-                    for (int i = 0; i < logsExclusivos.Count; i++)
+                    logsExclusivos = WebConfigurationManager.AppSettings["Logger.GravarLogExclusivo"].Split(',').ToList();
+                    if (logsExclusivos.Count > 0)
                     {
-                        logsExclusivos[i] = logsExclusivos[i].Trim();
+                        for (int i = 0; i < logsExclusivos.Count; i++)
+                        {
+                            logsExclusivos[i] = logsExclusivos[i].Trim();
+                        }
                     }
                 }
-            }
-            else
-            {
-                logsExclusivos = new List<string>();
+                else
+                {
+                    logsExclusivos = new List<string>();
+                }
             }
 
-            if (!loggerAtivo)
-            {
-                EventLog eventoLog = new EventLog();
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("O LOGGER não esta ativido no momento para LOG", EventLogEntryType.Information);
-            }
-            else
+            if (loggerAtivo)
             {
                 if (!Logger.escrevendoLog)
                 {
@@ -107,13 +104,11 @@ namespace Logger
         //    return true;
         //}
 
-        private static void LogWriterAsync()
+        private static async void LogWriterAsync()
         {
-            //var tr = new Task<bool>(() => IniciarEscreverLog());
-            var tr = new Thread(() => IniciarEscreverLog());
-            tr.IsBackground = true;
-            tr.Start();           
-           
+            var tr = new Task<bool>(() => IniciarEscreverLog());
+            var abc = await tr;
+            tr.Dispose();
         }
 
 
@@ -140,9 +135,7 @@ namespace Logger
                             }
                             catch (Exception ex)
                             {
-                                EventLog eventoLog = new EventLog();
-                                eventoLog.Source = "LOGGER - Sistema de Log";
-                                eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "IniciarEscreverLog() - Escrever um registro");
                             }
                         }
                     }
@@ -162,9 +155,7 @@ namespace Logger
                             }
                             catch (Exception ex)
                             {
-                                EventLog eventoLog = new EventLog();
-                                eventoLog.Source = "LOGGER - Sistema de Log";
-                                eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "IniciarEscreverLog() - Escrever um registro");
                             }
                         }
                     }
@@ -185,9 +176,7 @@ namespace Logger
                             }
                             catch (Exception ex)
                             {
-                                EventLog eventoLog = new EventLog();
-                                eventoLog.Source = "LOGGER - Sistema de Log";
-                                eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "IniciarEscreverLog() - Escrever um registro");
                             }
                         }
                     }
@@ -196,9 +185,8 @@ namespace Logger
             catch (Exception ex)
             {
                 escrevendoLog = false;
-                EventLog eventoLog = new EventLog();
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("O método IniciarEscreverLog() falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "IniciarEscreverLog()");
+
                 return true;
             }
             return false;
@@ -245,9 +233,8 @@ namespace Logger
             }
             catch (Exception ex)
             {
-                EventLog eventoLog = new EventLog();
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("O método FAZERLOG(T DadosLog) falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "FAZERLOG(T DadosLog)");
+
                 return false;
             }
         }
@@ -291,9 +278,8 @@ namespace Logger
             }
             catch (Exception ex)
             {
-                EventLog eventoLog = new EventLog();
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("O método FAZERLOG(T DadosLog, dynamic SegundoDados) falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "FAZERLOG(T DadosLog, dynamic SegundoDados)");
+
                 return false;
             }
         }
@@ -304,48 +290,26 @@ namespace Logger
         /// <typeparam name="T"></typeparam>
         /// <param name="DadosLog"></param>
         /// <param name="SegundoDados"></param>
-        public void FazerLogAsync<T>(T DadosLog, dynamic SegundoDados, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
+        public async void FazerLogAsync<T>(T DadosLog, dynamic SegundoDados, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
         {
-            var tr = new Thread(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));           
+            var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));
             tr.Start();
+            var abc = await tr;
+            tr.Dispose();
         }
 
-        public void FazerLogAsync<T>(string DadosLog, string SegundoDados, bool serializar, EnumTiposDeLog.TiposDeLog tipoDoLog)
+        /// <summary>
+        /// Override do método original para trabalhar com as chamdas vindas direto do Webservice.
+        /// </summary>
+        /// <typeparam name="string"></typeparam>
+        /// <param name="DadosLog"></param>
+        /// <param name="TituloAcao"></param>
+        /// <param name="tipoDoLog"></param>
+        /// <returns></returns>
+        public void FazerLogAsync(string DadosLog, string SegundoDados, bool serializar, EnumTiposDeLog.TiposDeLog tipoDoLog)
         {
             FazerLogAsync(JsonConvert.DeserializeObject(DadosLog), JsonConvert.DeserializeObject(SegundoDados), tipoDoLog);
         }
-
-        ///// <summary>
-        ///// Override quando tiver itens a mais do que o carrinho a ser colocado no log
-        ///// </summary>
-        ///// <typeparam name="T"></typeparam>
-        ///// <param name="DadosLog"></param>
-        ///// <param name="RequisicoesXml"></param>
-        ///// <returns></returns>
-        //public bool FazerLog<T>(T DadosLog, Dictionary<object, object> DicionarioDadosLog)
-        //{
-        //    try
-        //    {
-        //        bool ArquivoCriado = CriarArquivoFisicoLog();
-
-        //        if (ArquivoCriado)
-        //        {
-        //            PreencherLog(DadosLog, DicionarioDadosLog);
-        //            return true;
-        //        }
-        //        else
-        //        {
-        //            return false;
-        //        }
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        EventLog eventoLog = new EventLog();
-        //        eventoLog.Source = "LOGGER - Sistema de Log";
-        //        eventoLog.WriteEntry("O método FAZERLOG(T DadosLog, Dictionary<object, object> DicionarioDadosLog) falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
-        //        return false;
-        //    }
-        //}
 
         /// <summary>
         /// Override do método para que a chamada seja mais simplificado para uso do usuario. Que ao inves de enviar um dicionario montado, o usuario envia o Titula do ação e depois a Mensagem da ação.
@@ -386,9 +350,8 @@ namespace Logger
             }
             catch (Exception ex)
             {
-                EventLog eventoLog = new EventLog();
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("O método FAZERLOG(T DadosLog,string TituloAcao, string MensagemAcao) falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "FAZERLOG(T DadosLog,string TituloAcao, string MensagemAcao)");
+
                 return false;
             }
         }
@@ -467,9 +430,8 @@ namespace Logger
             }
             catch (Exception ex)
             {
-                EventLog eventoLog = new EventLog("");
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("Preenchimento do log falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "Preenchimento do log");
+
                 return false;
             }
         }
@@ -499,9 +461,8 @@ namespace Logger
             }
             catch (Exception ex)
             {
-                EventLog eventoLog = new EventLog("");
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("Criação do arquivo falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "Criação do arquivo");
+
                 return false;
             }
         }
@@ -584,9 +545,7 @@ namespace Logger
             }
             catch (Exception ex)
             {
-                EventLog eventoLog = new EventLog("");
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("Limpeza semanal de arquivos falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "Limpeza semanal de arquivos");
             }
         }
 
@@ -622,9 +581,8 @@ namespace Logger
             }
             catch (Exception ex)
             {
-                EventLog eventoLog = new EventLog();
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("Preenchimento do log falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "Preenchimento do log");
+
             }
         }
 
@@ -662,9 +620,8 @@ namespace Logger
             }
             catch (Exception ex)
             {
-                EventLog eventoLog = new EventLog();
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("Preenchimento do log falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "Preenchimento do log");
+
             }
         }
 
@@ -702,11 +659,23 @@ namespace Logger
             }
             catch (Exception ex)
             {
-                EventLog eventoLog = new EventLog();
-                eventoLog.Source = "LOGGER - Sistema de Log";
-                eventoLog.WriteEntry("Preenchimento do log falhou.\n Mensagem da exception: " + ex.Message + "\n" +
-                    "Tipo da Exception: " + ex.GetType().ToString() + "\n Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+                SalvarExceptionRegistro(ex, "LOGGER - Sistema de Log", "Preenchimento do log");
             }
         }
+
+        public static void SalvarExceptionRegistro(Exception ex, string source, string metodo)
+        {
+            try
+            {
+                EventLog eventoLog = new EventLog();
+                eventoLog.Source = source;
+                eventoLog.WriteEntry("O método " + metodo + " - falhou. Mensagem da exception: " + ex.Message + "\n" +
+                    "Tipo da Exception: " + ex.GetType().ToString() + "\n Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
+            }
+            catch
+            {
+            }
+        }
+
     }
 }
