@@ -14,16 +14,16 @@ namespace LoggerWcf
     public interface ILoggerWriter
     {
         [OperationContract]
-        [WebGet(UriTemplate = "/Escrever?log={DadosLog}&second={SegundoDados}&TipoLog={EnumTipoLog}",
+        [WebGet(UriTemplate = "/EscreverReg?log={DadosLog}&second={SegundoDados}&TipoLog={EnumTipoLog}",
            BodyStyle = WebMessageBodyStyle.Bare,
            RequestFormat = WebMessageFormat.Json)]
-        bool FazerLog(string DadosLog, string SegundoDados, int EnumTipoLog);
+        void FazerLog(string DadosLog, string SegundoDados, int EnumTipoLog);
 
         [OperationContract]
         [WebGet(UriTemplate = "/Escrever?log={DadosLog}&TipoLog={EnumTipoLog}",
            BodyStyle = WebMessageBodyStyle.Bare,
            RequestFormat = WebMessageFormat.Json)]
-        bool FazerLog(string DadosLog, int EnumTipoLog);
+        void FazerLogSimples(string DadosLog, int EnumTipoLog);
 
         // TODO: Adicione suas operações de serviço aqui
     }

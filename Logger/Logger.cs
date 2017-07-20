@@ -73,44 +73,16 @@ namespace Logger
             }
         }
 
-        //private static void EscreverLog()
-        //{
-        //    var tr = new Task<bool>(() => IniciarEscreverLog());
-        //    tr.Start();
-
-        //}
-
-        //private static bool IniciarEscreverLog(Dictionary<Guid, string> dadosLog)
-        //{
-        //    try
-        //    {
-
-        //        var informacoesLog = dadosLog.ToList();
-
-        //        for (int i = 0; i < informacoesLog.Count; i++)
-        //        {
-        //            File.AppendAllText(caminhoDoLogEstatico, informacoesLog[i].Value + Environment.NewLine);
-        //        }
-
-        //        //linhasEscrever.Remove(item.Key);
-        //    }
-        //    catch (Exception ex)
-        //    {
-        //        EventLog eventoLog = new EventLog();
-        //        eventoLog.Source = "LOGGER - Sistema de Log";
-        //        eventoLog.WriteEntry("O método IniciarEscreverLog() - Escrever um registro - falhou. Mensagem da exception: " + ex.Message + "/// Stacktrace da exception: " + ex.StackTrace, EventLogEntryType.Error);
-        //    }
-
-        //    return true;
-        //}
-
         private static async void LogWriterAsync()
         {
-            var tr = new Task<bool>(() => IniciarEscreverLog());
+            /*var tr = new Task<bool>(() => IniciarEscreverLog(), TaskCreationOptions.LongRunning);
             var abc = await tr;
-            tr.Dispose();
-        }
+            tr.Dispose();*/
 
+            var tr = new Thread(() => IniciarEscreverLog());
+            tr.IsBackground = true;
+            tr.Start();
+        }
 
         private static bool IniciarEscreverLog()
         {
@@ -151,7 +123,7 @@ namespace Logger
                             try
                             {
                                 File.AppendAllText(caminhoDoLogEstaticoErro, item.Value + Environment.NewLine);
-                                linhasEscreverInformacao.TryRemove(item.Key, out linharemovida);
+                                linhasEscreverErro.TryRemove(item.Key, out linharemovida);
                             }
                             catch (Exception ex)
                             {
@@ -172,7 +144,7 @@ namespace Logger
                             try
                             {
                                 File.AppendAllText(caminhoDoLogEstaticoAlerta, item.Value + Environment.NewLine);
-                                linhasEscreverInformacao.TryRemove(item.Key, out linharemovida);
+                                linhasEscreverAlerta.TryRemove(item.Key, out linharemovida);
                             }
                             catch (Exception ex)
                             {
@@ -298,6 +270,16 @@ namespace Logger
             tr.Dispose();
         }
 
+        public async Task<bool> FazerLogAsync<T>(T DadosLog, dynamic SegundoDados, bool async, EnumTiposDeLog.TiposDeLog tipoDoLog = EnumTiposDeLog.TiposDeLog.Informacao)
+        {
+            var tr = new Task<bool>(() => FazerLog(DadosLog, SegundoDados, tipoDoLog));
+            tr.Start();
+            var abc = await tr;
+            tr.Dispose();
+
+            return abc;
+        }
+
         /// <summary>
         /// Override do método original para trabalhar com as chamdas vindas direto do Webservice.
         /// </summary>
@@ -306,9 +288,9 @@ namespace Logger
         /// <param name="TituloAcao"></param>
         /// <param name="tipoDoLog"></param>
         /// <returns></returns>
-        public void FazerLogAsync(string DadosLog, string SegundoDados, bool serializar, EnumTiposDeLog.TiposDeLog tipoDoLog)
+        public async void FazerLogAsync(string DadosLog, string SegundoDados, bool serializar, EnumTiposDeLog.TiposDeLog tipoDoLog)
         {
-            FazerLogAsync(JsonConvert.DeserializeObject(DadosLog), JsonConvert.DeserializeObject(SegundoDados), tipoDoLog);
+            await FazerLogAsync(JsonConvert.DeserializeObject(DadosLog), JsonConvert.DeserializeObject(SegundoDados), true, tipoDoLog);
         }
 
         /// <summary>
